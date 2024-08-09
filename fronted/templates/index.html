@@ -1,0 +1,166 @@
+<html>
+    <head>
+        <link rel = "stylesheet" href="/static/css/login.css">
+        <!-- <script src = "./js/vue_min.js"></script> -->
+        <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+        <title> Login </title>
+    </head>
+
+    <body>
+        <div id = "app">
+            <div v-show = "template_status == 'login' ">
+                <div class="system_name">
+                    <h2> Login </h2>
+                </div>
+        
+                <div class="login_page">
+                    <div id = "container1">
+                        <div class="login">
+                            <h3> 使用者登入 </h3>
+                            
+                            <div class = "form_style" id = "test">
+                                <input type = "email" id ="email" name = "email" placeholder = "E-mail" required = "required" v-model = "email">
+                                <div class = "tab"></div>
+                                
+                                <input type = "password" id ="password" name = "password" placeholder = "Password" required = "required" v-model = "password">
+                                <div class = "tab"></div>
+    
+                                <button class = "change" v-on:click = "change_status('register')"> 註冊 </button>
+                                <button type="submit" class = "submit" v-on:click = "login()"> 確定 </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div v-show = "template_status == 'register' ">
+                <div class="system_name">
+                    <h2> Register </h2>
+                </div>
+    
+                <div class="signup_page">
+                    
+                    <div id = "container2">
+                        <div class="singup">
+    
+                           <h3>使用者註冊</h3>
+    
+                            <div class = "form_style" id = "test">
+            
+                                <input type = "email" id ="email" name = "email" placeholder = "E-mail"  required = "required" v-model = "register_email">
+                                <div class = "tab"></div>
+                                    
+                                <input type = "name" id ="username" name = "name" placeholder = "Name" required = "required" v-model = "register_username">
+                                <div class = "tab"></div>
+                                
+                                <input type = "password" id ="password" name = "password" placeholder = "Password" required = "required" v-model = "register_password">
+                                <div class = "tab"></div>
+    
+                                <input type = "password" id ="comfirm_password" name = "comfirm_password" placeholder = "Comfirm Password" required = "required" v-model = "register_comfirm_password">
+                                <div class = "tab"></div>
+    
+                                <button class = "change" v-on:click = "change_status('login')"> 取消 </button>
+                                <button class = "submit" v-on:click = "register()"> 確定 </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    </body>
+    
+</html>
+
+<script>
+
+    var app = Vue.createApp({
+        data() {
+            return {
+                template_status:'',
+                headers:{
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                },
+                
+                email:"",
+                password:"",
+
+                register_email:"",
+                register_username:"",
+                register_password:"",
+                register_comfirm_password:"",
+
+            }
+        },
+        
+        delimiters: ["%%", "%%"],
+        
+        created(){
+            this.template_status = "login";
+        },
+
+        methods:{
+            change_status(model){
+                this.template_status = model;
+            },
+
+            register(){
+                if( this.register_comfirm_password != this.register_password ){
+                    alert("密碼有誤");
+                    return ;
+                }
+
+                const body = JSON.stringify({
+                    email:this.register_email,
+                    username:this.register_username,
+                    password:this.register_password,
+                })
+
+                fetch("/users", {
+                    method:"POST",
+                    headers:this.headers,
+                    body:body
+                })
+                .then(response => {
+                    return response.json();
+                })
+                .then(response_json => {
+                    console.log(response_json.status);
+                })
+
+            },
+
+            login(){
+                const body = JSON.stringify({
+                    email:this.email,
+                    password:this.password,
+                })
+
+                fetch("/login", {
+                    method:"POST",
+                    headers:{
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                    },
+                    body:body
+                })
+                .then(response => {
+                    return response.json()
+                })
+                .then(response_json => {
+                    console.log(response_json)
+                    alert(response_json.detail);
+                    if(response_json.detail == "Login Success"){
+                        localStorage.setItem("token", response_json.access_token);
+                        window.open("/docs")
+                        document.location.href="/docs";
+                    }
+                })
+            },
+        }
+        
+
+      }).mount('#app');
+
+</script>
