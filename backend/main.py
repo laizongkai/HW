@@ -10,17 +10,16 @@ from datetime import timedelta, datetime, timezone
 from passlib.context import CryptContext
 from jwt.exceptions import InvalidTokenError
 from starlette import status
-import models
-from database import SessionLocal, engine
+
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
 from pydantic import BaseModel
 
 import jwt 
-#import auth
+import models
+from database import SessionLocal, engine
 
 app = FastAPI()
-#app.include_router(auth.router)
+
 
 app.mount("/static", StaticFiles(directory="../fronted/static"), name="static")
 templates = Jinja2Templates(directory = "../fronted/templates")
@@ -32,7 +31,7 @@ bcrypt_context = CryptContext(schemes = ["bcrypt"], deprecated = "auto")
 #JWT Secret and Algorithm
 SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 1
+ACCESS_TOKEN_EXPIRE_MINUTES = 2
 
 def get_db():
     db = SessionLocal()
@@ -66,7 +65,7 @@ class RegisterUserBase(BaseModel):
     password:str
 
 #建立使用者
-@app.post("/users")
+@app.post("/users", status_code = status.HTTP_200_OK)
 async def create_user(request: RegisterUserBase, db: db_dependency):
     
     print(request.username)
@@ -88,7 +87,7 @@ async def create_user(request: RegisterUserBase, db: db_dependency):
         
         create_JWT_password(db, email = request.email, password = request.password)
         
-        raise HTTPException(status_code = 200, detail = "Register Success")
+        return { "detail" : "Register Success"}
     
 #創建JWT密碼
 def create_JWT_password(db:Session,  email:str, password:str ):
@@ -106,7 +105,7 @@ class LoginUserBase(BaseModel):
     
 
 #登入
-@app.post("/login")     
+@app.post("/login", status_code = status.HTTP_200_OK)     
 def login_for_access_token(request:LoginUserBase, db:Session = Depends(get_db)):     
     print(request.email, request.password)
     user = authenticate_user(request.email, request.password, db)
@@ -122,8 +121,9 @@ def login_for_access_token(request:LoginUserBase, db:Session = Depends(get_db)):
     access_token = create_access_token(
         data = {"sub":request.email}, expires_delta = access_token_expires 
     )
-    #return Token(access_token=access_token, token_type="bearer")
-    return {"status_code":200, "access_token":access_token, "token_type":"bearer", "detail":"Login Success"}
+    return { "detail" : "Login Success" , "access_token":access_token, "token_type":"bearer"}
+    
+    
 
 #認證
 def authenticate_user(email, password, db:Session):
@@ -172,7 +172,7 @@ async def access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()
         data = {"sub": user.email}, expires_delta = access_token_expires
     )
 
-    return Token(access_token=access_token, token_type="bearer")
+    return Token(access_token = access_token, token_type = "bearer")
     
 
 class TokenData(BaseModel):
@@ -214,6 +214,7 @@ async def get_users_information(user_id:int, current_user: Annotated[User, Depen
         raise HTTPException(status_code = 404, detail = " No Data !")
     
     else:
+        
         return result
 
 class UpdateUserBase(BaseModel):
@@ -235,8 +236,20 @@ async def update_users_information(user_id:int, request: UpdateUserBase, current
 @app.delete("/users/{user_id}", status_code = status.HTTP_200_OK)
 async def delete_users(user_id:int, current_user: Annotated[User, Depends(get_current_user)], db:Session = Depends(get_db)):
     result = db.query(models.Users).filter(models.Users.id == user_id).first()
+    
     if result is None:
         raise HTTPException(status_code = 404, detail = " No Data !")
+    
+    elif result.email == current_user["email"]:
+        raise HTTPException(status_code = 404, detail = " Can't Delete this Data !")
+    
     else:
+        result2 = db.query(models.ConfirmUsers).filter(models.ConfirmUsers.email == result.email).first()
+        db.delete(result2)
+        db.commit()
+        
         db.delete(result)
         db.commit()
+        
+        return {"detail":"Delete Success"}
+        
