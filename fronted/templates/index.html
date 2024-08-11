@@ -1,6 +1,6 @@
 <html>
     <head>
-        <link rel = "stylesheet" href="/static/css/login.css">
+        <link rel = "stylesheet" href="/static/css/index.css">
         <!-- <script src = "./js/vue_min.js"></script> -->
         <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
         <title> Login </title>
@@ -26,7 +26,8 @@
                                 <div class = "tab"></div>
     
                                 <button class = "change" v-on:click = "change_status('register')"> 註冊 </button>
-                                <button type="submit" class = "submit" v-on:click = "login()"> 確定 </button>
+                                <button type="submit" class = "submit" v-on:click = "login()" v-if = "email != '' && password != '' "> 登入 </button>
+                                <button type="submit" class = "submit" v-else disabled> 登入 </button>
                             </div>
                         </div>
                     </div>
@@ -41,26 +42,32 @@
                 <div class="signup_page">
                     
                     <div id = "container2">
-                        <div class="singup">
+                        <div class="register">
     
                            <h3>使用者註冊</h3>
     
-                            <div class = "form_style" id = "test">
+                            <div class = "form_style" id = "register_form">
             
-                                <input type = "email" id ="email" name = "email" placeholder = "E-mail"  required = "required" v-model = "register_email">
+                                <input type = "email" id ="register_email" name = "register_email" placeholder = "E-mail"  required = "required" v-model = "register_email">
                                 <div class = "tab"></div>
                                     
                                 <input type = "name" id ="username" name = "name" placeholder = "Name" required = "required" v-model = "register_username">
                                 <div class = "tab"></div>
                                 
-                                <input type = "password" id ="password" name = "password" placeholder = "Password" required = "required" v-model = "register_password">
+                                <input type = "password" id ="register_password" name = "password" placeholder = "Password" required = "required" v-model = "register_password">
                                 <div class = "tab"></div>
     
                                 <input type = "password" id ="comfirm_password" name = "comfirm_password" placeholder = "Comfirm Password" required = "required" v-model = "register_comfirm_password">
                                 <div class = "tab"></div>
-    
+                                
+                                <span id = "register-warning" class = "register-warning" > %% warining %% </span>
+                                <div class = "tab"></div>
+
                                 <button class = "change" v-on:click = "change_status('login')"> 取消 </button>
-                                <button class = "submit" v-on:click = "register()"> 確定 </button>
+                                <button class = "submit" v-on:click = "register()" v-if = "warining == '' "> 確定 </button>
+                                <button class = "submit" v-else disabled> 確定 </button>
+                                
+
                             </div>
                         </div>
                     </div>
@@ -91,9 +98,41 @@
                 register_password:"",
                 register_comfirm_password:"",
 
+                warining:"",
             }
         },
         
+        watch:{
+            register_email:function(){
+                if(this.register_email.includes("@") == false){
+                    console.log(this.register_email);
+                    this.warining = "Email需要輸入含有 @ 的信箱內容";
+                }
+                else{
+                    this.warining = "";
+                }
+            },
+
+            register_password:function(){
+                if(this.register_comfirm_password != this.register_password && this.register_comfirm_password.length != 0){
+                    this.warining = "密碼以及確認密碼內容不一樣";
+                }
+                else{
+                    this.warining = "";
+                }
+            },
+
+            register_comfirm_password:function(){
+                if(this.register_comfirm_password != this.register_password){
+                    this.warining = "密碼以及確認密碼內容不一樣";
+                }
+                else{
+                    this.warining = "";
+                }
+            },
+
+        },
+
         delimiters: ["%%", "%%"],
         
         created(){
@@ -106,7 +145,7 @@
             },
 
             register(){
-                if( this.register_comfirm_password != this.register_password ){
+                if(this.register_comfirm_password == "" ){
                     alert("密碼有誤");
                     return ;
                 }
@@ -126,7 +165,9 @@
                     return response.json();
                 })
                 .then(response_json => {
-                    console.log(response_json.status);
+                    console.log(response_json.status_code);
+                    alert(response_json.detail);
+                    document.location.href="/";
                 })
 
             },
@@ -153,7 +194,7 @@
                     alert(response_json.detail);
                     if(response_json.detail == "Login Success"){
                         localStorage.setItem("token", response_json.access_token);
-                        window.open("/docs")
+                        
                         document.location.href="/docs";
                     }
                 })
